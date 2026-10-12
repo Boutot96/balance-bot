@@ -16,7 +16,18 @@ static void displayIP(const char* ip){
 
 }
 
-//static void displayBattery();
+
+static void displayBattery(int percentage){
+    //char buf[5];
+    int fillW = (20 * percentage) / 100;
+    //snprintf(buf, sizeof(buf), "%d%%", percentage);               //Uncomment these lines if you want
+    //int16_t x = OLED_WIDTH - strlen(buf) * 6 - 30;                //to display the battery percentage 
+    //oled.setCursor(x, 0);                                         //as a number in text
+    //oled.print(buf);
+    oled.drawRect(OLED_WIDTH - 30, 0, 24, 8, SSD1306_WHITE);
+    oled.fillRect(OLED_WIDTH - 30 + 24, 2, 2, 4, SSD1306_WHITE);
+    oled.fillRect(100, 2, fillW, 4, SSD1306_WHITE);
+}
 
 //static void displayTilt(float angle);
 
@@ -42,9 +53,12 @@ void displayUpdate(const DisplayData& data){
     if(millis() - lastUpdate < DISPLAY_PERIOD_MS) return;
     lastUpdate = millis();
     current = data;
-
+    oled.clearDisplay();
+    oled.setCursor(0, 0);
+    oled.print("Balance-Bot");
+    displayBattery((int)(current.batteryPct));
     displayIP(current.ip);
-    //displayBattery(current.batteryPct);
+    
     //displayTilt(current.angle);
     
     
