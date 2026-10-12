@@ -5,6 +5,8 @@
 #include <ArduinoOTA.h>
 #include <stdarg.h>
 
+static char ipText[16] = "";   
+
 static WiFiServer telnetServer(TEL_SERVER);
 static WiFiClient telnetClient;
 
@@ -59,4 +61,9 @@ void netLog(const char *fmt, ...) {
 
     Serial.print(buf);
     if(telnetClient && telnetClient.connected()) telnetClient.print(buf);
+}
+
+const char* netIP() {
+    snprintf(ipText, sizeof(ipText), "%s", WiFi.localIP().toString().c_str());
+    return ipText;
 }

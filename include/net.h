@@ -11,3 +11,6 @@ void netLog(const char *fmt, ...);
 
 // Answers OTA upload requests. Is ran every loop iteration
 void netService();
+
+//Returns ip address as a string. 0.0.0.0 if not connected
+const char* netIP();
