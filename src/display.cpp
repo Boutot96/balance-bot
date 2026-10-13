@@ -29,7 +29,27 @@ static void displayBattery(int percentage){
     oled.fillRect(100, 2, fillW, 4, SSD1306_WHITE);
 }
 
-//static void displayTilt(float angle);
+// Bubble level: a rounded "tube" with a bubble that slides with pitch angle.
+static void displayTilt(float angle) {
+    const int16_t tubeX = 4,  tubeY = 28;     // top-left of the tube
+    const int16_t tubeW = 120, tubeH = 14;    // size
+    const int16_t r     = tubeH / 2 - 2;      // bubble radius (fits inside the tube)
+    const float   range = 45.0f;              // ±45° maps to the tube's ends
+
+    // tube outline + center mark
+    oled.drawRoundRect(tubeX, tubeY, tubeW, tubeH, tubeH / 2, SSD1306_WHITE);
+    int16_t cx = tubeX + tubeW / 2;
+    oled.drawFastVLine(cx, tubeY - 3, 3, SSD1306_WHITE);              // tick above
+    oled.drawFastVLine(cx, tubeY + tubeH, 3, SSD1306_WHITE);          // tick below
+
+    // map angle → x position, clamped so the bubble stays inside the tube
+    float a = constrain(angle- BALANCE_SETPOINT_DEG, -range, range);
+    int16_t travel = tubeW / 2 - r - 3;                                // half the usable length
+    int16_t bx = cx + (int16_t)(a / range * travel);
+    int16_t by = tubeY + tubeH / 2;
+
+    oled.fillCircle(bx, by, r, SSD1306_WHITE);
+}
 
 
 bool displaySetup(){
@@ -56,10 +76,12 @@ void displayUpdate(const DisplayData& data){
     oled.clearDisplay();
     oled.setCursor(0, 0);
     oled.print("Balance-Bot");
+    oled.setCursor(0, 16);
+    oled.print(current.imu_status);
     displayBattery((int)(current.batteryPct));
     displayIP(current.ip);
     
-    //displayTilt(current.angle);
+    displayTilt(current.angle);
     
     
     oled.display();
