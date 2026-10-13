@@ -38,7 +38,7 @@ constexpr int      IMU_CAL_SAMPLES      = 500;     // gyro readings averaged at 
 //   accel ±4 g     → 8192 LSB per g       (raw / 8192  = g)
 constexpr float    IMU_GYRO_LSB_PER_DPS = 65.5f;
 constexpr float    IMU_ACCEL_LSB_PER_G  = 8192.0f;
-constexpr float    BALANCE_SETPOINT_DEG = -4.1f;
+
 
 
 // ----- Motors -----
@@ -60,3 +60,14 @@ constexpr uint8_t  MOT_CH_2B     = 3;
 constexpr int      MOT1_DIR      = +1;
 constexpr int      MOT2_DIR      = -1;
 
+
+// ----- Balance -----
+constexpr float    ARM_WINDOW_DEG = 3.0f;    // must be this close to setpoint to arm
+constexpr uint32_t ARM_HOLD_MS    = 500;     // ...for this long
+constexpr float    DISARM_DEG     = 16.0f;   // beyond this, give up (it's fallen)
+constexpr float    BAL_KP         = 35.0f;   // start low
+constexpr float    BAL_KD         = 0.65f;    // add after Kp
+constexpr int      BAL_SIGN       = +1;      // flip to -1 if wheels drive the wrong way
+constexpr float    BAL_KI      = 0.0f;    // start small
+constexpr float    BAL_I_LIMIT = 50.0f;   // anti-windup: max |integral|
+constexpr float    BALANCE_SETPOINT_DEG = -4.5f;

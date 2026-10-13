@@ -9,6 +9,7 @@ static char ipText[16] = "";
 
 static WiFiServer telnetServer(TEL_SERVER);
 static WiFiClient telnetClient;
+static void (*uploadStartCallback)() = nullptr;
 
 void netSetup() {
 
@@ -26,7 +27,10 @@ void netSetup() {
 
     ArduinoOTA.setHostname(HOSTNAME);
     ArduinoOTA.setPassword(OTA_PASS);
-    ArduinoOTA.onStart([]() { netLog("OTA update starting...\n"); });
+    ArduinoOTA.onStart([]() {
+        if (uploadStartCallback) uploadStartCallback();   // e.g. stop motors
+            netLog("OTA update starting...\n");
+        });
     ArduinoOTA.onEnd([]()   { netLog("\nOTA done, rebooting.\n"); });
     ArduinoOTA.onError([](ota_error_t e) { netLog("OTA error %u\n", e); });
     ArduinoOTA.begin();
@@ -66,4 +70,8 @@ void netLog(const char *fmt, ...) {
 const char* netIP() {
     snprintf(ipText, sizeof(ipText), "%s", WiFi.localIP().toString().c_str());
     return ipText;
+}
+
+void netOnUploadStart(void (*callback)()) {
+  uploadStartCallback = callback;
 }

@@ -69,7 +69,7 @@ bool imuSetup() {
 
 }
 
-void imuService() {
+bool imuService() {
   // ---- filter: every IMU_PERIOD_MS ----
     uint32_t now = micros();
     if (now - lastMicros >= IMU_PERIOD_MS * 1000UL) {
@@ -82,13 +82,9 @@ void imuService() {
             float accelAngle = atan2f(-ay, az) * (180.0f/3.1519f);
             angle = IMU_ALPHA * (angle + rate * dt) + (1.0f - IMU_ALPHA) * accelAngle;
         }
+        return true;
     }
-    // ---- TEMP test log: once per second ----
-    static uint32_t lastLog = 0;
-    if (millis() - lastLog >= 1000) {
-        lastLog = millis();
-        netLog("angle %6.2f  rate %7.2f\n", angle, rate);
-    }
+    return false;
 }
 
 float imuAngle() { return angle; }

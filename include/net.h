@@ -14,3 +14,6 @@ void netService();
 
 //Returns ip address as a string. 0.0.0.0 if not connected
 const char* netIP();
+
+// Register a function to run when an OTA upload starts (e.g. stop motors).
+void netOnUploadStart(void (*callback)());
