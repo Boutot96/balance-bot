@@ -2,6 +2,7 @@
 #include "display.h"
 #include "battery.h"
 #include "imu.h"
+#include "motor.h"
 #include "config.h"
 #include <Arduino.h>
 #include <Wire.h>
@@ -9,8 +10,10 @@
 static DisplayData currentData;
 
 void setup() {
+  motorSetup();
   Serial.begin(115200);
   delay(1000);
+
   Wire.begin(SDA_PIN, SCL_PIN);
 
   if (!imuSetup()) {

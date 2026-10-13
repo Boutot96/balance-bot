@@ -42,10 +42,10 @@ constexpr float    BALANCE_SETPOINT_DEG = -4.1f;
 
 
 // ----- Motors -----
-constexpr int MOTOR_1A = 32;
-constexpr int MOTOR_1B = 33;
-constexpr int MOTOR_2A = 25;
-constexpr int MOTOR_2B = 26;
+constexpr int MOT_PIN_1A = 32;
+constexpr int MOT_PIN_1B = 33;
+constexpr int MOT_PIN_2A = 25;
+constexpr int MOT_PIN_2B = 26;
 constexpr uint32_t MOT_PWM_HZ    = 20000;   // 20 kHz: above hearing, so no motor whine
 constexpr uint8_t  MOT_PWM_BITS  = 8;       // duty 0–255
 constexpr int      MOT_PWM_MAX   = (1 << MOT_PWM_BITS) - 1;   // 255, derived so it can't drift
