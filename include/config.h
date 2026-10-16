@@ -61,8 +61,8 @@ constexpr uint8_t  MOT_CH_2A     = 2;
 constexpr uint8_t  MOT_CH_2B     = 3;
 
 // Direction signs so +speed = forward on both wheels (from the direction test)
-constexpr int      MOT1_DIR      = +1;
-constexpr int      MOT2_DIR      = -1;
+constexpr int      MOT1_DIR      = -1;
+constexpr int      MOT2_DIR      = +1;
 
 
 // ----- Balance -----
@@ -71,14 +71,20 @@ constexpr uint32_t ARM_HOLD_MS    = 500;     // ...for this long
 constexpr float    DISARM_DEG     = 16.0f;   // beyond this, give up (it's fallen)
 constexpr float    BAL_KP         = 15.0f;   // start low
 constexpr float    BAL_KD         = 0.5f;    // add after Kp
-constexpr int      BAL_SIGN       = +1;      // flip to -1 if wheels drive the wrong way
+constexpr int      BAL_SIGN       = -1;      // flip if wheels drive the wrong way
 constexpr float    BAL_KI      = 1.0f;    // start small
 constexpr float    BAL_I_LIMIT = 50.0f;   // anti-windup: max |integral|
 constexpr float    BALANCE_SETPOINT_DEG = -4.5f;
 
 
 // ----- Encoders -----
-constexpr int ENC1_A = 18;
-constexpr int ENC1_B = 16;
-constexpr int ENC2_A = 17;
-constexpr int ENC2_B = 4;
+constexpr int ENC1_A = 16;   // left wheel (driver side)
+constexpr int ENC1_B = 18;
+constexpr int ENC2_A = 4;    // right wheel (passenger side)
+constexpr int ENC2_B = 17;
+constexpr int ENC1_DIR = +1;
+constexpr int ENC2_DIR = +1;   // mirrored motor: adjust after testing
+constexpr uint32_t ENC_PERIOD_MS = 20;
+constexpr int ENC_LEFT  = 0;
+constexpr int ENC_RIGHT = 1;
+constexpr float ENC_COUNTS_PER_REV = 340.0f;   // A both edges

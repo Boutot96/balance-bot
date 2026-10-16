@@ -148,7 +148,7 @@ void displayUpdate(const DisplayData& data){
     static uint32_t lastStatus = 0;
     if (millis() - lastStatus >= DISPLAY_PERIOD_MS) {   // status: 10 Hz
         lastStatus = millis();
-        oled_control(data);
+        oled_control(data); 
     }
 
     const float   range = 40.0f; 
