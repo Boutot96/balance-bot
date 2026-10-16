@@ -2,6 +2,7 @@
 #include "config.h"
 #include "net.h"
 #include <Wire.h>
+#include <Arduino.h>
 
 // ---- MPU6050 registers ----
 constexpr uint8_t REG_PWR_MGMT_1   = 0x6B;
@@ -14,6 +15,7 @@ constexpr uint8_t REG_ACCEL_XOUT_H = 0x3B;   // first of 14 data registers
 static float    gyroOffset = 0.0f;   // raw gx while still (from calibration)
 static float    rate       = 0.0f;   // pitch rate, deg/s
 static float    angle      = 0.0f;   // pitch angle, deg
+static float    dt         = 0.0f;   // 
 static uint32_t lastMicros = 0;      // time of last filter update
 
 // ---- helpers ----
@@ -73,13 +75,13 @@ bool imuService() {
   // ---- filter: every IMU_PERIOD_MS ----
     uint32_t now = micros();
     if (now - lastMicros >= IMU_PERIOD_MS * 1000UL) {
-        float dt = (now - lastMicros) / 1e6f;     // measured, seconds
+        dt = (now - lastMicros) / 1e6f;     // measured, seconds
         lastMicros = now;
 
         int16_t ax, ay, az, gx, gy, gz;
         if (readRaw(ax, ay, az, gx, gy, gz)) {
             rate = (gx - gyroOffset) / IMU_GYRO_LSB_PER_DPS * IMU_GYRO_SIGN;
-            float accelAngle = atan2f(-ay, az) * (180.0f/3.1519f);
+            float accelAngle = atan2f(-ay, az) * RAD_TO_DEG;
             angle = IMU_ALPHA * (angle + rate * dt) + (1.0f - IMU_ALPHA) * accelAngle;
         }
         return true;
@@ -87,5 +89,6 @@ bool imuService() {
     return false;
 }
 
-float imuAngle() { return angle; }
-float imuRate() { return rate; }
+float imuAngle()  { return angle; }
+float imuRate()   { return rate;  }
+float imuDt()     { return dt;    }

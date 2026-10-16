@@ -6,6 +6,7 @@
 
 
 static Adafruit_SSD1306 oled(OLED_WIDTH, OLED_HEIGHT, &Wire, -1, 400000, 400000);
+static Adafruit_SSD1306 oled2(OLED_WIDTH, OLED_HEIGHT, &Wire,  -1, 400000, 400000);
 static bool             ready = false;   // did the screen start?
 static DisplayData      current;         // latest data from main
 
@@ -51,27 +52,9 @@ static void displayTilt(float angle) {
     oled.fillCircle(bx, by, r, SSD1306_WHITE);
 }
 
-
-bool displaySetup(){
-    if(!oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR, true, false)){
-        return false;
-    }
-    oled.stopscroll();
-    oled.clearDisplay();
-    oled.setTextSize(1);
-    oled.setTextColor(SSD1306_WHITE);
-    oled.setCursor(0, 0);
-    oled.print("Balance-Bot");
-    oled.display();
-    ready = true;
-    return ready;
-}
-
-void displayUpdate(const DisplayData& data){
-    static uint32_t lastUpdate = 0;
-    if(!ready) return;
-    if(millis() - lastUpdate < DISPLAY_PERIOD_MS) return;
-    lastUpdate = millis();
+// Function for controlling oled screen
+static void oled_control(const DisplayData& data){
+    
     current = data;
     oled.clearDisplay();
     oled.setCursor(0, 0);
@@ -80,10 +63,102 @@ void displayUpdate(const DisplayData& data){
     oled.print(current.imu_status);
     displayBattery((int)(current.batteryPct));
     displayIP(current.ip);
-    
     displayTilt(current.angle);
-    
-    
     oled.display();
+}
+
+// Function for displaying a spinning cube
+struct Vec3 { float x, y, z; };
+static const Vec3 CUBE_VERTS[8] = {
+    {-1, -1, -1}, { 1, -1, -1}, { 1,  1, -1}, {-1,  1, -1},   // 0-3: back face  (z = -1)
+    {-1, -1,  1}, { 1, -1,  1}, { 1,  1,  1}, {-1,  1,  1},   // 4-7: front face (z = +1)
+};
+struct Edge { uint8_t a, b; };
+static const Edge CUBE_EDGES[12] = { {0,4}, {1,5}, {2,6}, {3,7}, {0,1}, {1,2}, {2,3}, {3,0}, {4,5},{5,6},{6,7},{7,4} };
+
+static void displayCube(){
+    static float angleA = 0.0f, angleB = 0.0f;   // static: keeps its value between frames
+    angleA += 0.04f;
+    angleB += 0.03f;
+    if (angleA > TWO_PI) angleA -= TWO_PI;
+    if (angleB > TWO_PI) angleB -= TWO_PI;
+
+    int16_t px[8], py[8];
+    
+    float cA = cosf(angleA);
+    float sA = sinf(angleA);
+    float cB = cosf(angleB);
+    float sB = sinf(angleB);
+
+    for (int i = 0; i < 8; i++) {
+        float x = CUBE_VERTS[i].x;
+        float y = CUBE_VERTS[i].y;
+        float z = CUBE_VERTS[i].z;
+
+        
+        // 1. rotate around one axis by angleA 
+        float x1 = x * cA - y *sA;
+        float y1 = x * sA + y * cA;
+        float z1 = z;
+        // 2. rotate around another axis by angleB
+        float x2 = x1 * cB - z1 *sB;
+        float y2 = y1;
+        float z2 = x1 * sB + z1 * cB;
+        // 3. project: px[i] = ..., py[i] = ...
+        px[i] = 64 + (int16_t)(y2 * CUBE_SCALE / (x2 + CUBE_DIST));
+        py[i] = 32 - (int16_t)(z2 * CUBE_SCALE / (x2 + CUBE_DIST));
+
+    }
+
+    oled2.clearDisplay();
+    for (const Edge& e : CUBE_EDGES) {
+        oled2.drawLine(px[e.a], py[e.a], px[e.b], py[e.b], SSD1306_WHITE);
+    }
+    oled2.display();
+}
+
+bool displaySetup(){
+    if(!oled.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR, true, false)){
+        return false;
+    }
+    if(!oled2.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR2, true, false)){
+        return false;
+    }
+    oled.clearDisplay();
+    oled.setTextSize(1);
+    oled.setTextColor(SSD1306_WHITE);
+    oled.setCursor(0, 0);
+    oled.print("Balance-Bot");
+    oled.display();
+
+    oled2.clearDisplay();
+    oled2.setTextSize(1);
+    oled2.setTextColor(SSD1306_WHITE);
+    oled2.setCursor(0, 0);
+    oled2.print("Balance-Bot: Eyes");
+    oled2.display();
+    ready = true;
+    return ready;
+}
+
+void displayUpdate(const DisplayData& data){
+    
+    if (!ready) return;
+
+    static uint32_t lastStatus = 0;
+    if (millis() - lastStatus >= DISPLAY_PERIOD_MS) {   // status: 10 Hz
+        lastStatus = millis();
+        oled_control(data);
+    }
+
+    const float   range = 40.0f; 
+    float a = abs(constrain(data.angle- BALANCE_SETPOINT_DEG, -range, range))/10;
+    a = constrain(a, 1, 4);
+    static uint32_t lastCube = 0;
+    if (millis() - lastCube >= CUBE_PERIOD_MS*a) {        // cube: ~30 Hz
+        
+        lastCube = millis();
+        displayCube();
+    }
 }
 

@@ -12,7 +12,11 @@ constexpr int WIFI_TIMEOUT_MS = 10000;
 constexpr int OLED_WIDTH = 128;
 constexpr int OLED_HEIGHT = 64;
 constexpr int OLED_ADDR = 0x3C;
+constexpr int OLED_ADDR2 = 0x3D;
 constexpr int DISPLAY_PERIOD_MS = 100;
+constexpr int CUBE_PERIOD_MS = 30;
+constexpr float CUBE_SCALE = 80.0f;
+constexpr float CUBE_DIST  = 4.0f;
 
 
 // ----- Battery Configuration -----
@@ -65,9 +69,16 @@ constexpr int      MOT2_DIR      = -1;
 constexpr float    ARM_WINDOW_DEG = 3.0f;    // must be this close to setpoint to arm
 constexpr uint32_t ARM_HOLD_MS    = 500;     // ...for this long
 constexpr float    DISARM_DEG     = 16.0f;   // beyond this, give up (it's fallen)
-constexpr float    BAL_KP         = 35.0f;   // start low
-constexpr float    BAL_KD         = 0.65f;    // add after Kp
+constexpr float    BAL_KP         = 15.0f;   // start low
+constexpr float    BAL_KD         = 0.5f;    // add after Kp
 constexpr int      BAL_SIGN       = +1;      // flip to -1 if wheels drive the wrong way
-constexpr float    BAL_KI      = 0.0f;    // start small
+constexpr float    BAL_KI      = 1.0f;    // start small
 constexpr float    BAL_I_LIMIT = 50.0f;   // anti-windup: max |integral|
 constexpr float    BALANCE_SETPOINT_DEG = -4.5f;
+
+
+// ----- Encoders -----
+constexpr int ENC1_A = 18;
+constexpr int ENC1_B = 16;
+constexpr int ENC2_A = 17;
+constexpr int ENC2_B = 4;
