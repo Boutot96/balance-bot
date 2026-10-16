@@ -38,15 +38,15 @@ void loop() {
   netService();
   battService();
   encService();
-
+ 
   float wheelSpeed = (encSpeed(ENC_LEFT) + encSpeed(ENC_RIGHT)) / 2.0f;
 
   if (imuService()) balanceStep(imuAngle(), imuRate(), imuDt(), wheelSpeed);
-  
+
   static uint32_t lastLog = 0;
   if (balanceArmed() && millis() - lastLog >= 100) {
       lastLog = millis();
-      
+
       netLog("sp %.2f  spd %.2f  ang %.2f\n",
             balanceSetpoint(), wheelSpeed, imuAngle());
   }

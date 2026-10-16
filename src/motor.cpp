@@ -35,7 +35,19 @@ void motorSetup() {
 
 }
 
+static int applyDeadband(int cmd) {
+  const int RAMP = 10;                      // below this, blend in the deadband
+  int mag = abs(cmd);
+  int out;
+  if (mag >= RAMP) out = mag + MOT_DEADBAND;
+  else             out = mag * (RAMP + MOT_DEADBAND) / RAMP;  // 0 → 0, 10 → 34, no jump
+  return (cmd >= 0) ? out : -out;
+}
+
 void motorSet(int left, int right) {
+  left  = applyDeadband(left);
+  right = applyDeadband(right);
+
   // 1. clamp both to -MOT_PWM_MAX..+MOT_PWM_MAX   (constrain())
   left  = constrain(left , -MOT_PWM_MAX, MOT_PWM_MAX);
   right = constrain(right, -MOT_PWM_MAX, MOT_PWM_MAX);

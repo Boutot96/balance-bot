@@ -53,6 +53,7 @@ constexpr int MOT_PIN_2B = 26;
 constexpr uint32_t MOT_PWM_HZ    = 20000;   // 20 kHz: above hearing, so no motor whine
 constexpr uint8_t  MOT_PWM_BITS  = 8;       // duty 0–255
 constexpr int      MOT_PWM_MAX   = (1 << MOT_PWM_BITS) - 1;   // 255, derived so it can't drift
+constexpr int MOT_DEADBAND = 18;   // ~80% of measured 30 (first wheel movement)
 
 // LEDC channels (core 2.x assigns PWM by channel, one per pin)
 constexpr uint8_t  MOT_CH_1A     = 0;
@@ -69,7 +70,7 @@ constexpr int      MOT2_DIR      = +1;
 constexpr float    ARM_WINDOW_DEG = 3.0f;    // must be this close to setpoint to arm
 constexpr uint32_t ARM_HOLD_MS    = 500;     // ...for this long
 constexpr float    DISARM_DEG     = 16.0f;   // beyond this, give up (it's fallen)
-constexpr float    BAL_KP         = 15.0f;   // start low
+constexpr float    BAL_KP         = 13.0f;   // start low
 constexpr float    BAL_KD         = 0.5f;    // add after Kp
 constexpr int      BAL_SIGN       = -1;      // flip if wheels drive the wrong way
 constexpr float    BAL_KI      = 1.0f;    // start small
@@ -78,7 +79,7 @@ constexpr float    BALANCE_SETPOINT_DEG = -4.5f;
 
 // ----- Speed -----
 constexpr float SPD_KP        = 5.0f;   // degrees of lean per rev/s; start small
-constexpr float SPD_KI        = 0.0f;   // leave at 0 until P works
+constexpr float SPD_KI        = 1.0f;   // leave at 0 until P works
 constexpr float SPD_I_LIMIT   = 5.0f;   // clamp on the speed integral
 constexpr float SPD_MAX_TILT  = 6.0f;   // max degrees the speed loop may shift the setpoint
 constexpr int   SPD_SIGN      = -1;     // flip if it accelerates instead of braking
