@@ -13,7 +13,6 @@ static DisplayData currentData;
 
 void setup() {
   motorSetup();
-  motorSet(150, 150);
   Serial.begin(115200);
   delay(1000);
 
@@ -38,18 +37,20 @@ void setup() {
 void loop() {
   netService();
   battService();
-  //if (imuService()) balanceStep(imuAngle(), imuRate(), imuDt());
   encService();
 
+  float wheelSpeed = (encSpeed(ENC_LEFT) + encSpeed(ENC_RIGHT)) / 2.0f;
+
+  if (imuService()) balanceStep(imuAngle(), imuRate(), imuDt(), wheelSpeed);
+  
   static uint32_t lastLog = 0;
-  static uint32_t stop = 0;
-  if (millis() - lastLog >= 200) {
+  if (balanceArmed() && millis() - lastLog >= 100) {
       lastLog = millis();
-      netLog("L %.2f  R %.2f rev/s\n", encSpeed(ENC_LEFT), encSpeed(ENC_RIGHT));
+      
+      netLog("sp %.2f  spd %.2f  ang %.2f\n",
+            balanceSetpoint(), wheelSpeed, imuAngle());
   }
-  if (millis() - stop >= 25000) {
-    motorStop();
-  }
+
   currentData.batteryPct = battPercentage();
   currentData.angle      = imuAngle();
   if (!balanceArmed()) displayUpdate(currentData);

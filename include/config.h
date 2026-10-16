@@ -76,6 +76,13 @@ constexpr float    BAL_KI      = 1.0f;    // start small
 constexpr float    BAL_I_LIMIT = 50.0f;   // anti-windup: max |integral|
 constexpr float    BALANCE_SETPOINT_DEG = -4.5f;
 
+// ----- Speed -----
+constexpr float SPD_KP        = 5.0f;   // degrees of lean per rev/s; start small
+constexpr float SPD_KI        = 0.0f;   // leave at 0 until P works
+constexpr float SPD_I_LIMIT   = 5.0f;   // clamp on the speed integral
+constexpr float SPD_MAX_TILT  = 6.0f;   // max degrees the speed loop may shift the setpoint
+constexpr int   SPD_SIGN      = -1;     // flip if it accelerates instead of braking
+
 
 // ----- Encoders -----
 constexpr int ENC1_A = 16;   // left wheel (driver side)

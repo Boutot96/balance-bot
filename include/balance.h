@@ -1,9 +1,9 @@
 #pragma once
-enum class BalState { Disarmed, Armed };
+
 
 void balanceSetup();
 
-void balanceStep(float angle, float rate, float dt);
+void balanceStep(float angle, float rate, float dt, float wheelSpeed);
 
 bool balanceArmed();
 

@@ -6,17 +6,23 @@
 #include "balance.h"
 #include <Arduino.h>
 
+enum class BalState { Disarmed, Armed };
 
 static BalState balState     = BalState::Disarmed;
 static uint32_t uprightSince = 0;
 static float integral = 0.0f; 
 static uint32_t satSince = 0;
+static float speedI = 0.0f;
+static float shift = 0.0f;
+static float setpoint = BALANCE_SETPOINT_DEG;
 
 static void disarm(const char* reason) {
   motorStop();
   balState     = BalState::Disarmed;
   uprightSince = 0;
   satSince     = 0;
+  shift        = 0.0f; 
+  setpoint     = BALANCE_SETPOINT_DEG;
   netLog("DISARMED: %s\n", reason);
 }
 
@@ -24,28 +30,38 @@ bool balanceArmed(){
     return balState == BalState::Armed;
 }
 
-void balanceStep(float angle, float rate, float dt){
-    float error = angle - BALANCE_SETPOINT_DEG;
+void balanceStep(float angle, float rate, float dt, float wheelSpeed){    
+    float tiltErr = angle - BALANCE_SETPOINT_DEG;   // safety: distance from upright
 
     switch (balState) {
     case BalState::Disarmed:
       motorStop();
-      if (fabsf(error) < ARM_WINDOW_DEG && !battIsLow()) {
+      if (fabsf(tiltErr) < ARM_WINDOW_DEG && !battIsLow()) {
         if (uprightSince == 0) uprightSince = millis();
         else if (millis() - uprightSince >= ARM_HOLD_MS) {
           balState = BalState::Armed;
           integral = 0.0f;
+          speedI = 0.0f;
           netLog("ARMED\n");
         }
-      } else {
+      } 
+      else {
         uprightSince = 0;                    // left the window, so restart the hold timer
       }
       break;
 
     case BalState::Armed: {
-      if (fabsf(error) > DISARM_DEG) { disarm("fell");        break; }
+      if (fabsf(tiltErr) > DISARM_DEG) { disarm("fell");        break; }
       if (battIsLow())               { disarm("battery low"); break; }
+        
+      float speedErr = -wheelSpeed; 
+      speedI += speedErr * dt;
+      speedI = constrain(speedI, -SPD_I_LIMIT, SPD_I_LIMIT);
+      shift = constrain(SPD_SIGN * (SPD_KP * speedErr + SPD_KI * speedI), -SPD_MAX_TILT, SPD_MAX_TILT);
 
+
+      setpoint = BALANCE_SETPOINT_DEG + shift;
+      float error = angle - setpoint; 
       integral += error * dt;
       integral  = constrain(integral, -BAL_I_LIMIT, BAL_I_LIMIT);
 
@@ -61,3 +77,6 @@ void balanceStep(float angle, float rate, float dt){
       }
     }
 }
+
+float balanceSetpoint() { return setpoint; }
+float balanceShift()    { return shift; }
