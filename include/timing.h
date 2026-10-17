@@ -28,21 +28,24 @@ struct Every {
 //         if (reportTimer.ready()) imuStats.report();
 struct WorkStats {
     const char* name;
-    uint32_t t0 = 0, maxUs = 0, sumUs = 0, n = 0;
+    uint32_t t0 = 0, minUs = UINT32_MAX, maxUs = 0, sumUs = 0, n = 0;
 
     explicit WorkStats(const char* nm) : name(nm) {}
 
     void start() { t0 = micros(); }
-    void stop() {
-        uint32_t d = micros() - t0;
+    void stop()  { add(micros() - t0); }
+
+    void add(uint32_t d) {               // record any measurement directly
+        if (d < minUs) minUs = d;
         if (d > maxUs) maxUs = d;
         sumUs += d;
         n++;
     }
-    void report() {                          // print, then reset for the next window
+    void report() {
         if (n > 0)
-            netLog("%s avg %lu  max %lu  n %lu us\n", name,
-                   (unsigned long)(sumUs / n), (unsigned long)maxUs, (unsigned long)n);
-        maxUs = sumUs = n = 0;
+            netLog("%-12s avg %5lu  min %5lu  max %5lu  n %5lu us\n", name,
+                   (unsigned long)(sumUs / n), (unsigned long)minUs,
+                   (unsigned long)maxUs, (unsigned long)n);
+        minUs = UINT32_MAX; maxUs = sumUs = n = 0;
     }
 };

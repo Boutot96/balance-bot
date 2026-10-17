@@ -6,13 +6,16 @@
 #include "config.h"
 #include "balance.h"
 #include "encoder.h"
+#include "timing.h"
 #include <Arduino.h>
 #include <Wire.h>
 
 static DisplayData currentData;
-static uint32_t imuMax  = 0;
-static uint32_t imuSum  = 0;
-static uint32_t imuN    = 0;
+
+static WorkStats loopStats("loop"),  netStats("net"),   battStats("batt"),
+                 encStats("enc"),    imuStats("imu+bal"), periodStats("period"),
+                 eyesStats("eyes"),  statusStats("status"), reportStats("report");
+static Every reportTimer(2000);
 
 void setup() {
   motorSetup();
@@ -38,20 +41,41 @@ void setup() {
 }
 
 void loop() {
-  netService();
-  battService();
-  encService();
- 
-  float wheelSpeed = (encSpeed(ENC_LEFT) + encSpeed(ENC_RIGHT)) / 2.0f;
-  if (imuService()){
-    balanceStep(imuAngle(), imuRate(), imuDt(), wheelSpeed);
-  }
-  
-  currentData.batteryPct = battPercentage();
-  currentData.angle      = imuAngle();
-  
-  if (!balanceArmed()) displayUpdate(currentData);
-  eyeService(imuAngle());
+    loopStats.start();
 
-  
+    netStats.start();  netService();  netStats.stop();
+    battStats.start(); battService(); battStats.stop();
+    encStats.start();  encService();  encStats.stop();
+
+    float wheelSpeed = (encSpeed(ENC_LEFT) + encSpeed(ENC_RIGHT)) / 2.0f;
+
+    imuStats.start();
+    if (imuService()) {
+        static uint32_t lastRun = 0;
+        uint32_t now = micros();
+        if (lastRun) periodStats.add(now - lastRun);   // gap between control runs
+        lastRun = now;
+        balanceStep(imuAngle(), imuRate(), imuDt(), wheelSpeed);
+        imuStats.stop();
+    }
+
+    eyesStats.start(); eyeService(imuAngle()); eyesStats.stop();
+
+    currentData.batteryPct = battPercentage();
+    currentData.angle      = imuAngle();
+    if (!balanceArmed()) {
+        statusStats.start(); displayUpdate(currentData); statusStats.stop();
+    }
+
+    loopStats.stop();
+
+    if (reportTimer.ready()) {
+        reportStats.start();
+        netLog("----\n");
+        loopStats.report();  periodStats.report(); imuStats.report();
+        netStats.report();   battStats.report();   encStats.report();
+        eyesStats.report();  statusStats.report(); displayReport();
+        reportStats.report();     // prints the PREVIOUS report's time
+        reportStats.stop();       // records THIS report's time
+    }
 }

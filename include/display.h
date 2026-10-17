@@ -16,3 +16,5 @@ void eyeService(float angle);
 bool displaySetup();
 
 void displayUpdate(const DisplayData& data);
+
+void displayReport();

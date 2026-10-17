@@ -4,6 +4,8 @@
 #include <WiFi.h>
 #include <ArduinoOTA.h>
 #include <stdarg.h>
+#include <WiFiUdp.h>
+static WiFiUDP udp;
 
 static char ipText[16] = "";   
 
@@ -60,11 +62,18 @@ void netLog(const char *fmt, ...) {
     char buf[256];
     va_list args;
     va_start(args, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, args);
+    int len = vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
 
-    Serial.print(buf);
-    if(telnetClient && telnetClient.connected()) telnetClient.print(buf);
+    if (len <= 0) return;
+    if (len >= (int)sizeof(buf)) len = sizeof(buf) - 1;   // message was cut off; send what fit
+
+    if (telnetClient && telnetClient.connected()) {
+        udp.beginPacket(telnetClient.remoteIP(), 4210);
+        udp.write((const uint8_t*)buf, len);
+        udp.endPacket();
+    }
+    // else: drop it rather than block
 }
 
 const char* netIP() {

@@ -17,6 +17,7 @@ static float    rate       = 0.0f;   // pitch rate, deg/s
 static float    angle      = 0.0f;   // pitch angle, deg
 static float    dt         = 0.0f;   // 
 static uint32_t lastMicros = 0;      // time of last filter update
+static uint32_t lastRun = 0;     // time of the last actual read (for dt)
 
 // ---- helpers ----
 static bool writeReg(uint8_t reg, uint8_t value) {
@@ -46,47 +47,54 @@ static bool readRaw(int16_t& ax, int16_t& ay, int16_t& az,
 
 // ---- public ----
 bool imuSetup() {
-    if (!writeReg(REG_PWR_MGMT_1,   0x00))     return false;    // wake
-    delay(100); // wait for the IMU to wake up
-    if (!writeReg(REG_CONFIG,       0x03))     return false;    // DLPF ~44 Hz
-    if (!writeReg(REG_GYRO_CONFIG,  1 << 3))   return false;    // ±500 dps
-    if (!writeReg(REG_ACCEL_CONFIG, 1 << 3))   return false;    // ±4 g
+  if (!writeReg(REG_PWR_MGMT_1,   0x00))     return false;    // wake
+  delay(100); // wait for the IMU to wake up
+  if (!writeReg(REG_CONFIG,       0x03))     return false;    // DLPF ~44 Hz
+  if (!writeReg(REG_GYRO_CONFIG,  1 << 3))   return false;    // ±500 dps
+  if (!writeReg(REG_ACCEL_CONFIG, 1 << 3))   return false;    // ±4 g
 
-    int16_t ax, ay, az, gx, gy, gz;
+  int16_t ax, ay, az, gx, gy, gz;
 
-    // gyro calibration: robot must be still
-    float sum = 0.0f;
-    for (int i = 0; i < IMU_CAL_SAMPLES; i++) {
-        if (!readRaw(ax, ay, az, gx, gy, gz)) return false;
-        sum += gx;
-        delay(5);
-    }
-    gyroOffset = sum / IMU_CAL_SAMPLES;
+  // gyro calibration: robot must be still
+  float sum = 0.0f;
+  for (int i = 0; i < IMU_CAL_SAMPLES; i++) {
+      if (!readRaw(ax, ay, az, gx, gy, gz)) return false;
+      sum += gx;
+      delay(5);
+  }
+  gyroOffset = sum / IMU_CAL_SAMPLES;
 
-    // start the filter from the accelerometer's angle
-    if (!readRaw(ax, ay, az, gx, gy, gz)) return false;
-    angle = atan2f(-ay, az) * (180.0f/3.14159f);
-    lastMicros = micros();
-    return true;
+  // start the filter from the accelerometer's angle
+  if (!readRaw(ax, ay, az, gx, gy, gz)) return false;
+  angle = atan2f(-ay, az) * (180.0f/3.14159f);
+  lastMicros = micros();
+  lastRun = micros();
+  return true;
 
 }
 
-bool imuService() {
-  // ---- filter: every IMU_PERIOD_MS ----
-    uint32_t now = micros();
-    if (now - lastMicros >= IMU_PERIOD_MS * 1000UL) {
-        dt = (now - lastMicros) / 1e6f;     // measured, seconds
-        lastMicros = now;
+bool imuUpdate() {
+  static uint32_t lastRun = 0;
+  uint32_t now = micros();
+  dt = (now - lastRun) / 1e6f;          // real elapsed time since last update
+  lastRun = now;
 
-        int16_t ax, ay, az, gx, gy, gz;
-        if (readRaw(ax, ay, az, gx, gy, gz)) {
-            rate = (gx - gyroOffset) / IMU_GYRO_LSB_PER_DPS * IMU_GYRO_SIGN;
-            float accelAngle = atan2f(-ay, az) * RAD_TO_DEG;
-            angle = IMU_ALPHA * (angle + rate * dt) + (1.0f - IMU_ALPHA) * accelAngle;
-        }
-        return true;
-    }
-    return false;
+  int16_t ax, ay, az, gx, gy, gz;
+  if (!readRaw(ax, ay, az, gx, gy, gz)) return false;   // keep last angle, report failure
+
+  rate = (gx - gyroOffset) / IMU_GYRO_LSB_PER_DPS * IMU_GYRO_SIGN;
+  float accelAngle = atan2f(-ay, az) * RAD_TO_DEG;
+  angle = IMU_ALPHA * (angle + rate * dt) + (1.0f - IMU_ALPHA) * accelAngle;
+  return true;
+}
+
+bool imuService() {                       // superloop scheduling only
+  const uint32_t PERIOD = IMU_PERIOD_MS * 1000UL;
+  uint32_t now = micros();
+  if (now - lastMicros < PERIOD) return false;
+  lastMicros += PERIOD;
+  if (now - lastMicros >= PERIOD) lastMicros = now;   // resync after a long stall
+  return imuUpdate();
 }
 
 float imuAngle()  { return angle; }

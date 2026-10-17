@@ -7,6 +7,9 @@
 
 static Every     frameTimer(CUBE_PERIOD_MS);
 
+static WorkStats chunkStats("oled chunk");
+static WorkStats drawStats("drawCube");
+
 
 static Adafruit_SSD1306 oled(OLED_WIDTH, OLED_HEIGHT, &Wire, -1, 800000, 400000);
 static Adafruit_SSD1306 oled2(OLED_WIDTH, OLED_HEIGHT, &Wire,  -1, 800000, 400000);
@@ -86,8 +89,8 @@ static const Edge CUBE_EDGES[12] = { {0,4}, {1,5}, {2,6}, {3,7}, {0,1}, {1,2}, {
 
 static void drawCube(){
     static float angleA = 0.0f, angleB = 0.0f;   // static: keeps its value between frames
-    angleA += 0.04f;
-    angleB += 0.03f;
+    angleA += 0.16f;
+    angleB += 0.12f;
     if (angleA > TWO_PI) angleA -= TWO_PI;
     if (angleB > TWO_PI) angleB -= TWO_PI;
 
@@ -152,7 +155,9 @@ void eyeService(float angle){
     if(!ready) return;
 
     if(chunk >= 0){
+        chunkStats.start();
         oledSendChunk(oled2, Wire, OLED_ADDR2, chunk);
+        chunkStats.stop();
         chunk++;
         if(chunk == 32) chunk = -1;
         return;
@@ -160,7 +165,7 @@ void eyeService(float angle){
 
     float a = fabsf(constrain(angle - BALANCE_SETPOINT_DEG, -40, 40)) / 10;
     a = constrain(a, 1, 4);
-    if(frameTimer.ready(CUBE_PERIOD_MS*a)) {drawCube(); chunk = 0;}
+    if(frameTimer.ready(CUBE_PERIOD_MS*a)) {drawStats.start(); drawCube(); drawStats.stop(); chunk = 0;}
     
 }
 
@@ -200,3 +205,4 @@ void displayUpdate(const DisplayData& data){
 
 }
 
+void displayReport() { chunkStats.report(); drawStats.report(); }

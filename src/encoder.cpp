@@ -1,9 +1,13 @@
 #include "encoder.h"
 #include "config.h"
+#include "timing.h"
+
+static Every encTimer(ENC_PERIOD_MS);
 
 static volatile int32_t counts[2]       = {0,0};
 static int32_t          lastCounts[2]   = {0, 0};   // counts at the last speed update
 static float            speeds[2]       = {0.0f,0.0f};
+static uint32_t lastRun = 0;
 
 static portMUX_TYPE encMux = portMUX_INITIALIZER_UNLOCKED;
 
@@ -25,17 +29,15 @@ void encSetup(){
 
     attachInterrupt(digitalPinToInterrupt(ENC1_A), encLeftISR, CHANGE);
     attachInterrupt(digitalPinToInterrupt(ENC2_A), encRightISR, CHANGE);
+    lastRun = micros();
 }
 
-void encService(){
-    static uint32_t lastUpdate = 0;
-    if (millis() - lastUpdate >= ENC_PERIOD_MS) {
-
-        static uint32_t lastMicros = 0;
-        uint32_t nowUs = micros();
-        float dt = (nowUs - lastMicros) / 1e6f;   // real seconds since last update
-        lastMicros = nowUs;
-        const int   dirs[2] = { ENC1_DIR, ENC2_DIR };
+void encUpdate(){
+    uint32_t nowUs = micros();
+    float dt = (nowUs - lastRun) / 1e6f;   // real seconds since last update
+    if (dt <= 0.0f) return;
+    lastRun = nowUs;
+    const int   dirs[2] = { ENC1_DIR, ENC2_DIR };
 
         for (int side = 0; side < 2; side++) {
 
@@ -48,9 +50,10 @@ void encService(){
 
             speeds[side] = 0.7f * speeds[side] + 0.3f * rps;   // smooth
         }
-        
-        lastUpdate = millis();
-    }
+}
+
+void encService() {
+    if (encTimer.ready()) encUpdate();
 }
 
 int32_t encCount(int side)  { 
