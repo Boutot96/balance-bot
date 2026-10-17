@@ -1,15 +1,23 @@
 #include "display.h"
 #include "config.h"
+#include "timing.h"
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+static Every     frameTimer(CUBE_PERIOD_MS);
 
-static Adafruit_SSD1306 oled(OLED_WIDTH, OLED_HEIGHT, &Wire, -1, 400000, 400000);
-static Adafruit_SSD1306 oled2(OLED_WIDTH, OLED_HEIGHT, &Wire,  -1, 400000, 400000);
+
+static Adafruit_SSD1306 oled(OLED_WIDTH, OLED_HEIGHT, &Wire, -1, 800000, 400000);
+static Adafruit_SSD1306 oled2(OLED_WIDTH, OLED_HEIGHT, &Wire,  -1, 800000, 400000);
 static bool             ready = false;   // did the screen start?
 static DisplayData      current;         // latest data from main
 
+
+static EyesMode eyesMode = EyesMode::Cube;
+static int8_t chunk = -1; 
+
+void eyesSetMode(EyesMode m) { eyesMode = m; }
 
 static void displayIP(const char* ip){
     oled.setCursor(0, 48);
@@ -76,7 +84,7 @@ static const Vec3 CUBE_VERTS[8] = {
 struct Edge { uint8_t a, b; };
 static const Edge CUBE_EDGES[12] = { {0,4}, {1,5}, {2,6}, {3,7}, {0,1}, {1,2}, {2,3}, {3,0}, {4,5},{5,6},{6,7},{7,4} };
 
-static void displayCube(){
+static void drawCube(){
     static float angleA = 0.0f, angleB = 0.0f;   // static: keeps its value between frames
     angleA += 0.04f;
     angleB += 0.03f;
@@ -114,7 +122,46 @@ static void displayCube(){
     for (const Edge& e : CUBE_EDGES) {
         oled2.drawLine(px[e.a], py[e.a], px[e.b], py[e.b], SSD1306_WHITE);
     }
-    oled2.display();
+
+}
+
+// Send a list of command bytes to an SSD1306
+static void oledCmd(TwoWire& bus, uint8_t addr, const uint8_t* cmds, size_t n) {
+  bus.beginTransmission(addr);
+  bus.write(0x00);                  // control byte: commands follow
+  bus.write(cmds, n);
+  bus.endTransmission();
+}
+
+// Send chunk 0..31 of the display buffer (32 bytes each, 4 per page)
+static void oledSendChunk(Adafruit_SSD1306& d, TwoWire& bus, uint8_t addr, uint8_t chunk) {
+  uint8_t page = chunk / 4;         // 0..7
+  uint8_t col  = (chunk % 4) * 32;  // 0, 32, 64, 96
+
+  const uint8_t win[] = { 0x21, col, (uint8_t)(col + 31),   // column range
+                          0x22, page, page };                // page range
+  oledCmd(bus, addr, win, sizeof(win));
+
+  bus.beginTransmission(addr);
+  bus.write(0x40);                  // control byte: pixel data follows
+  bus.write(d.getBuffer() + page * 128 + col, 32);
+  bus.endTransmission();
+}
+
+void eyeService(float angle){
+    if(!ready) return;
+
+    if(chunk >= 0){
+        oledSendChunk(oled2, Wire, OLED_ADDR2, chunk);
+        chunk++;
+        if(chunk == 32) chunk = -1;
+        return;
+    }    
+
+    float a = fabsf(constrain(angle - BALANCE_SETPOINT_DEG, -40, 40)) / 10;
+    a = constrain(a, 1, 4);
+    if(frameTimer.ready(CUBE_PERIOD_MS*a)) {drawCube(); chunk = 0;}
+    
 }
 
 bool displaySetup(){
@@ -142,23 +189,14 @@ bool displaySetup(){
 }
 
 void displayUpdate(const DisplayData& data){
-    
     if (!ready) return;
 
     static uint32_t lastStatus = 0;
-    if (millis() - lastStatus >= DISPLAY_PERIOD_MS) {   // status: 10 Hz
+
+    if (millis() - lastStatus >= DISPLAY_PERIOD_MS) {          // status: 10 Hz
         lastStatus = millis();
-        oled_control(data); 
+        oled_control(data);
     }
 
-    const float   range = 40.0f; 
-    float a = abs(constrain(data.angle- BALANCE_SETPOINT_DEG, -range, range))/10;
-    a = constrain(a, 1, 4);
-    static uint32_t lastCube = 0;
-    if (millis() - lastCube >= CUBE_PERIOD_MS*a) {        // cube: ~30 Hz
-        
-        lastCube = millis();
-        displayCube();
-    }
 }
 

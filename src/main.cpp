@@ -10,6 +10,9 @@
 #include <Wire.h>
 
 static DisplayData currentData;
+static uint32_t imuMax  = 0;
+static uint32_t imuSum  = 0;
+static uint32_t imuN    = 0;
 
 void setup() {
   motorSetup();
@@ -40,18 +43,15 @@ void loop() {
   encService();
  
   float wheelSpeed = (encSpeed(ENC_LEFT) + encSpeed(ENC_RIGHT)) / 2.0f;
-
-  if (imuService()) balanceStep(imuAngle(), imuRate(), imuDt(), wheelSpeed);
-
-  static uint32_t lastLog = 0;
-  if (balanceArmed() && millis() - lastLog >= 100) {
-      lastLog = millis();
-
-      netLog("sp %.2f  spd %.2f  ang %.2f\n",
-            balanceSetpoint(), wheelSpeed, imuAngle());
+  if (imuService()){
+    balanceStep(imuAngle(), imuRate(), imuDt(), wheelSpeed);
   }
-
+  
   currentData.batteryPct = battPercentage();
   currentData.angle      = imuAngle();
+  
   if (!balanceArmed()) displayUpdate(currentData);
+  eyeService(imuAngle());
+
+  
 }
