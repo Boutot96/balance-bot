@@ -9,3 +9,5 @@ float imuAngle();  // Retrieves the current pitch angle calculated from the IMU 
 float imuRate();  // Retrieves the current pitch rate (angular velocity) from the IMU readings
 
 float imuDt();
+
+bool imuUpdate();

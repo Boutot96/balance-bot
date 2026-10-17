@@ -8,3 +8,5 @@ void encService();
 int32_t encCount(int side);
 
 float encSpeed(int side);
+
+void encUpdate();

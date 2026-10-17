@@ -17,6 +17,42 @@ static WorkStats loopStats("loop"),  netStats("net"),   battStats("batt"),
                  eyesStats("eyes"),  statusStats("status"), reportStats("report");
 static Every reportTimer(2000);
 
+static TaskHandle_t controlHandle = nullptr;
+
+static void onOtaStart() {
+    if (controlHandle) vTaskSuspend(controlHandle);   // control task stops running
+    motorStop();                                      // now nothing can restart them
+}
+
+static void controlTask(void* param){
+  TickType_t lastWake = xTaskGetTickCount();
+  const TickType_t PERIOD = pdMS_TO_TICKS(IMU_PERIOD_MS);
+  uint8_t encDiv = 0;
+  uint32_t lastRun = micros();
+
+  for(;;){
+    vTaskDelayUntil(&lastWake, PERIOD);     // sleep until next 5ms mark
+
+    uint32_t now = micros();
+    periodStats.add(now - lastRun);
+    lastRun = now;
+
+    imuStats.start();
+    if(++encDiv >= ENC_PERIOD_MS / IMU_PERIOD_MS) {
+      encDiv = 0;
+      encUpdate();
+    }
+
+    imuUpdate();
+    float wheelSpeed = (encSpeed(ENC_LEFT) + encSpeed(ENC_RIGHT)) / 2.0f;
+    balanceStep(imuAngle(), imuRate(), imuDt(), wheelSpeed);
+    imuStats.stop();
+
+  }
+
+
+}
+
 void setup() {
   motorSetup();
   Serial.begin(115200);
@@ -35,9 +71,20 @@ void setup() {
 
   displaySetup();
   netSetup();
-  netOnUploadStart(motorStop);
+  netOnUploadStart(onOtaStart);
   snprintf(currentData.ip, sizeof(currentData.ip), "%s", netIP());
   encSetup();
+
+  xTaskCreatePinnedToCore(
+    controlTask,      // function
+    "control",        // name
+    4096,             // stack, bytes
+    nullptr,          // param
+    5,                // priority (loop() is 1)
+    &controlHandle,   // handle
+    1                 // core
+  );
+
 }
 
 void loop() {
@@ -45,19 +92,8 @@ void loop() {
 
     netStats.start();  netService();  netStats.stop();
     battStats.start(); battService(); battStats.stop();
-    encStats.start();  encService();  encStats.stop();
 
-    float wheelSpeed = (encSpeed(ENC_LEFT) + encSpeed(ENC_RIGHT)) / 2.0f;
-
-    imuStats.start();
-    if (imuService()) {
-        static uint32_t lastRun = 0;
-        uint32_t now = micros();
-        if (lastRun) periodStats.add(now - lastRun);   // gap between control runs
-        lastRun = now;
-        balanceStep(imuAngle(), imuRate(), imuDt(), wheelSpeed);
-        imuStats.stop();
-    }
+    
 
     eyesStats.start(); eyeService(imuAngle()); eyesStats.stop();
 
