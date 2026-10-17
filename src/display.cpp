@@ -11,8 +11,8 @@ static WorkStats chunkStats("oled chunk");
 static WorkStats drawStats("drawCube");
 
 
-static Adafruit_SSD1306 oled(OLED_WIDTH, OLED_HEIGHT, &Wire, -1, 800000, 400000);
-static Adafruit_SSD1306 oled2(OLED_WIDTH, OLED_HEIGHT, &Wire,  -1, 800000, 400000);
+static Adafruit_SSD1306 oled(OLED_WIDTH, OLED_HEIGHT, &Wire, -1, 400000, 400000);
+static Adafruit_SSD1306 oled2(OLED_WIDTH, OLED_HEIGHT, &Wire,  -1, 400000, 400000);
 static bool             ready = false;   // did the screen start?
 static DisplayData      current;         // latest data from main
 

@@ -18,6 +18,15 @@ static WorkStats loopStats("loop"),  netStats("net"),   battStats("batt"),
 static Every reportTimer(2000);
 
 static TaskHandle_t controlHandle = nullptr;
+static hw_timer_t* controlTimer = nullptr;
+
+static uint32_t overruns = 0;
+
+static void IRAM_ATTR onControlTimer() {
+    BaseType_t woke = pdFALSE;
+    vTaskNotifyGiveFromISR(controlHandle, &woke);   // "wake up, it's time"
+    if (woke) portYIELD_FROM_ISR();                 // switch to it right away
+}
 
 static void onOtaStart() {
     if (controlHandle) vTaskSuspend(controlHandle);   // control task stops running
@@ -25,13 +34,15 @@ static void onOtaStart() {
 }
 
 static void controlTask(void* param){
-  TickType_t lastWake = xTaskGetTickCount();
-  const TickType_t PERIOD = pdMS_TO_TICKS(IMU_PERIOD_MS);
+  //TickType_t lastWake = xTaskGetTickCount();
+  //const TickType_t PERIOD = pdMS_TO_TICKS(IMU_PERIOD_MS);
   uint8_t encDiv = 0;
   uint32_t lastRun = micros();
 
   for(;;){
-    vTaskDelayUntil(&lastWake, PERIOD);     // sleep until next 5ms mark
+    //vTaskDelayUntil(&lastWake, PERIOD);     // sleep until next 5ms mark
+    uint32_t pending = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    if(pending > 1) overruns += pending - 1;
 
     uint32_t now = micros();
     periodStats.add(now - lastRun);
@@ -51,6 +62,14 @@ static void controlTask(void* param){
   }
 
 
+}
+
+static void housekeepingTask(void*) {
+    for (;;) {
+        netService();
+        battService();
+        vTaskDelay(pdMS_TO_TICKS(10));    // "about every 10 ms" — doesn't need to be exact
+    }
 }
 
 void setup() {
@@ -85,17 +104,18 @@ void setup() {
     1                 // core
   );
 
+  xTaskCreatePinnedToCore(housekeepingTask, "house", 4096, nullptr, 1, nullptr, 0);
+
+  controlTimer = timerBegin(0, 80, true);            // timer 0, 80 MHz / 80 = 1 MHz → 1 tick = 1 µs, count up
+  timerAttachInterrupt(controlTimer, &onControlTimer, true);
+  timerAlarmWrite(controlTimer, IMU_PERIOD_MS * 1000, true);   // 5000 µs, auto-reload
+  timerAlarmEnable(controlTimer);
+
 }
 
 void loop() {
     loopStats.start();
-
-    netStats.start();  netService();  netStats.stop();
-    battStats.start(); battService(); battStats.stop();
-
-    
-
-    eyesStats.start(); eyeService(imuAngle()); eyesStats.stop();
+    //eyesStats.start(); eyeService(imuAngle()); eyesStats.stop();
 
     currentData.batteryPct = battPercentage();
     currentData.angle      = imuAngle();
