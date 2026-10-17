@@ -13,8 +13,28 @@ static WiFiServer telnetServer(TEL_SERVER);
 static WiFiClient telnetClient;
 static void (*uploadStartCallback)() = nullptr;
 
-void netSetup() {
+struct LogMsg { char text[96]; };
+static QueueHandle_t logQueue;
 
+// logger task: sleeps until a message arrives, then sends it
+static void loggerTask(void*) {
+    LogMsg m;
+    for (;;) {
+        xQueueReceive(logQueue, &m, portMAX_DELAY);   // block until something arrives
+        // udp.beginPacket / write / endPacket — the ONLY place UDP is used
+        if (telnetClient && telnetClient.connected()) {
+            udp.beginPacket(telnetClient.remoteIP(), 4210);
+            udp.write((const uint8_t*)m.text, strlen(m.text));
+            udp.endPacket();
+        }
+        // else: drop it rather than block
+    }
+}
+
+void netSetup() {
+    logQueue = xQueueCreate(16, sizeof(LogMsg));
+    xTaskCreatePinnedToCore(loggerTask, "logger", 4096, nullptr, 1, nullptr, 0);
+    
     WiFi.mode(WIFI_STA);
     WiFi.setHostname(HOSTNAME);
     WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -58,22 +78,16 @@ void netService() {
     
 }
 
+
+
 void netLog(const char *fmt, ...) {
-    char buf[256];
+    if (!logQueue) return;                                 // not started yet
+    LogMsg m;
     va_list args;
     va_start(args, fmt);
-    int len = vsnprintf(buf, sizeof(buf), fmt, args);
+    vsnprintf(m.text, sizeof(m.text), fmt, args);          // always null-terminated
     va_end(args);
-
-    if (len <= 0) return;
-    if (len >= (int)sizeof(buf)) len = sizeof(buf) - 1;   // message was cut off; send what fit
-
-    if (telnetClient && telnetClient.connected()) {
-        udp.beginPacket(telnetClient.remoteIP(), 4210);
-        udp.write((const uint8_t*)buf, len);
-        udp.endPacket();
-    }
-    // else: drop it rather than block
+    xQueueSend(logQueue, &m, 0);                           // full? drop it, never wait
 }
 
 const char* netIP() {
