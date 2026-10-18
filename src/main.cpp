@@ -7,6 +7,7 @@
 #include "balance.h"
 #include "encoder.h"
 #include "timing.h"
+#include "teleop.h"
 #include <Arduino.h>
 #include <Wire.h>
 
@@ -16,6 +17,7 @@ static WorkStats loopStats("loop"),  netStats("net"),   battStats("batt"),
                  encStats("enc"),    imuStats("imu+bal"), periodStats("period"),
                  eyesStats("eyes"),  statusStats("status"), reportStats("report");
 static Every reportTimer(2000);
+static Every dbgTimer(100);
 
 static TaskHandle_t controlHandle = nullptr;
 static hw_timer_t* controlTimer = nullptr;
@@ -114,17 +116,25 @@ void setup() {
 }
 
 void loop() {
-    loopStats.start();
-    //eyesStats.start(); eyeService(imuAngle()); eyesStats.stop();
+    //loopStats.start();
+    //eyesStats.start(); 
+    eyeService(imuAngle()); 
+    //eyesStats.stop();
 
     currentData.batteryPct = battPercentage();
     currentData.angle      = imuAngle();
     if (!balanceArmed()) {
         statusStats.start(); displayUpdate(currentData); statusStats.stop();
     }
-
-    loopStats.stop();
-
+    if (dbgTimer.ready()) {
+        float tv, tw; teleopGet(tv, tw);
+        float spd = (encSpeed(ENC_LEFT) + encSpeed(ENC_RIGHT)) / 2.0f;
+        netLog("armed %d v %.2f want %.2f tgt %.2f spd %.2f sp %.2f ang %.2f\n",
+              balanceArmed(), tv, balanceWantSpeed(), balanceTargetSpeed(),
+              spd, balanceSetpoint(), imuAngle());
+    }
+    //loopStats.stop();
+/* 
     if (reportTimer.ready()) {
         reportStats.start();
         netLog("----\n");
@@ -134,4 +144,5 @@ void loop() {
         reportStats.report();     // prints the PREVIOUS report's time
         reportStats.stop();       // records THIS report's time
     }
+     */
 }

@@ -73,7 +73,7 @@ constexpr float    DISARM_DEG     = 16.0f;   // beyond this, give up (it's falle
 constexpr float    BAL_KP         = 13.0f;   // start low
 constexpr float    BAL_KD         = 0.5f;    // add after Kp
 constexpr int      BAL_SIGN       = -1;      // flip if wheels drive the wrong way
-constexpr float    BAL_KI      = 1.0f;    // start small
+constexpr float    BAL_KI      = 0.0f;    // start small
 constexpr float    BAL_I_LIMIT = 50.0f;   // anti-windup: max |integral|
 constexpr float    BALANCE_SETPOINT_DEG = -4.5f;
 
@@ -96,3 +96,9 @@ constexpr uint32_t ENC_PERIOD_MS = 20;
 constexpr int ENC_LEFT  = 0;
 constexpr int ENC_RIGHT = 1;
 constexpr float ENC_COUNTS_PER_REV = 340.0f;   // A both edges
+
+// ------ Teleop ------
+constexpr uint32_t TELEOP_TIMEOUT_MS = 300;
+constexpr float MAX_DRIVE_SPEED = 1.0f;
+constexpr float MAX_TURN_PWM = 30.0f;
+constexpr float MAX_ACCEL = 1.0f;

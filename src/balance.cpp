@@ -3,6 +3,7 @@
 #include "net.h"
 #include "battery.h"
 #include "imu.h"
+#include "teleop.h"
 #include "balance.h"
 #include <Arduino.h>
 
@@ -15,6 +16,9 @@ static uint32_t satSince = 0;
 static float speedI = 0.0f;
 static float shift = 0.0f;
 static float setpoint = BALANCE_SETPOINT_DEG;
+static float targetSpeed = 0.0f;
+static float wantSpeedDbg = 0.0f;   // last commanded speed, for logging
+static bool wasDriving = false;
 
 static void disarm(const char* reason) {
   motorStop();
@@ -42,6 +46,7 @@ void balanceStep(float angle, float rate, float dt, float wheelSpeed){
           balState = BalState::Armed;
           integral = 0.0f;
           speedI = 0.0f;
+          targetSpeed = 0.0f;
           netLog("ARMED\n");
         }
       } 
@@ -53,10 +58,23 @@ void balanceStep(float angle, float rate, float dt, float wheelSpeed){
     case BalState::Armed: {
       if (fabsf(tiltErr) > DISARM_DEG) { disarm("fell");        break; }
       if (battIsLow())               { disarm("battery low"); break; }
-        
-      float speedErr = -wheelSpeed; 
+       
+      float v, w;
+      teleopGet(v, w);
+      float wantSpeed = v * MAX_DRIVE_SPEED;   // rev/s, config.h (start ~0.5)
+      wantSpeedDbg = wantSpeed;
+      bool driving = (wantSpeed != 0.0f);              // ← new
+      if (driving != wasDriving) speedI = 0;           // ← reset only on start/stop
+      wasDriving = driving;  
+
+      float turn      = w * MAX_TURN_PWM;
+      float step = MAX_ACCEL * dt;
+      targetSpeed += constrain(wantSpeed - targetSpeed, -step, step);
+
+      float speedErr = targetSpeed - wheelSpeed; 
       speedI += speedErr * dt;
       speedI = constrain(speedI, -SPD_I_LIMIT, SPD_I_LIMIT);
+      if (wantSpeed != 0.0f) speedI = 0;
       shift = constrain(SPD_SIGN * (SPD_KP * speedErr + SPD_KI * speedI), -SPD_MAX_TILT, SPD_MAX_TILT);
 
 
@@ -72,7 +90,7 @@ void balanceStep(float angle, float rate, float dt, float wheelSpeed){
       else                           { satSince = 0; }
       if (satSince && millis() - satSince > 300) { disarm("saturated"); break; }
 
-      motorSet((int)out, (int)out);
+      motorSet((int)out + turn, (int)out - turn);
       break;
       }
     }
@@ -80,3 +98,5 @@ void balanceStep(float angle, float rate, float dt, float wheelSpeed){
 
 float balanceSetpoint() { return setpoint; }
 float balanceShift()    { return shift; }
+float balanceWantSpeed()   { return wantSpeedDbg; }
+float balanceTargetSpeed() { return targetSpeed; }
