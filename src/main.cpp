@@ -80,6 +80,7 @@ void setup() {
   delay(1000);
 
   Wire.begin(SDA_PIN, SCL_PIN);
+  Wire1.begin(SDA2_PIN, SCL2_PIN);
 
   if (!imuSetup()) {
     snprintf(currentData.imu_status, sizeof(currentData.imu_status), "Failed");
@@ -116,33 +117,36 @@ void setup() {
 }
 
 void loop() {
-    //loopStats.start();
-    //eyesStats.start(); 
-    eyeService(imuAngle()); 
-    //eyesStats.stop();
+    loopStats.start();
+
+    eyesStats.start();
+    eyeService(imuAngle());
+    eyesStats.stop();
 
     currentData.batteryPct = battPercentage();
     currentData.angle      = imuAngle();
     if (!balanceArmed()) {
-        statusStats.start(); displayUpdate(currentData); statusStats.stop();
+        statusStats.start();
+        displayUpdate(currentData);
+        statusStats.stop();
     }
-    if (dbgTimer.ready()) {
-        float tv, tw; teleopGet(tv, tw);
-        float spd = (encSpeed(ENC_LEFT) + encSpeed(ENC_RIGHT)) / 2.0f;
-        netLog("armed %d v %.2f want %.2f tgt %.2f spd %.2f sp %.2f ang %.2f\n",
-              balanceArmed(), tv, balanceWantSpeed(), balanceTargetSpeed(),
-              spd, balanceSetpoint(), imuAngle());
+
+    loopStats.stop();
+
+    // ---- bring-up checks: signs, encoders, battery (10 Hz) ----
+    if (LOG_BRINGUP && dbgTimer.ready()) {
+        netLog("arm %d ang %6.2f rate %7.1f  L %5.2f R %5.2f  bat %.2fV\n",
+               balanceArmed(), imuAngle(), imuRate(),
+               encSpeed(ENC_LEFT), encSpeed(ENC_RIGHT), battVoltage());
     }
-    //loopStats.stop();
-/* 
-    if (reportTimer.ready()) {
+
+    // ---- timing report (every 2 s) ----
+    if (LOG_TIMING && reportTimer.ready()) {
         reportStats.start();
-        netLog("----\n");
+        netLog("---- overruns %lu\n", (unsigned long)overruns);
         loopStats.report();  periodStats.report(); imuStats.report();
-        netStats.report();   battStats.report();   encStats.report();
         eyesStats.report();  statusStats.report(); displayReport();
-        reportStats.report();     // prints the PREVIOUS report's time
-        reportStats.stop();       // records THIS report's time
+        reportStats.report();
+        reportStats.stop();
     }
-     */
 }

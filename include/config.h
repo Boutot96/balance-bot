@@ -6,6 +6,8 @@ constexpr char HOSTNAME[] = "balance-bot";
 constexpr int TEL_SERVER = 23;
 constexpr int SDA_PIN = 21;
 constexpr int SCL_PIN = 19;
+constexpr int SDA2_PIN = 22;
+constexpr int SCL2_PIN = 23;
 constexpr int WIFI_TIMEOUT_MS = 10000;
 
 // ----- Display Configuration -----
@@ -75,7 +77,7 @@ constexpr float    BAL_KD         = 0.5f;    // add after Kp
 constexpr int      BAL_SIGN       = -1;      // flip if wheels drive the wrong way
 constexpr float    BAL_KI      = 0.0f;    // start small
 constexpr float    BAL_I_LIMIT = 50.0f;   // anti-windup: max |integral|
-constexpr float    BALANCE_SETPOINT_DEG = -4.5f;
+constexpr float    BALANCE_SETPOINT_DEG = 2.0f;
 
 // ----- Speed -----
 constexpr float SPD_KP        = 5.0f;   // degrees of lean per rev/s; start small
@@ -86,12 +88,12 @@ constexpr int   SPD_SIGN      = -1;     // flip if it accelerates instead of bra
 
 
 // ----- Encoders -----
-constexpr int ENC1_A = 16;   // left wheel (driver side)
-constexpr int ENC1_B = 18;
-constexpr int ENC2_A = 4;    // right wheel (passenger side)
-constexpr int ENC2_B = 17;
+constexpr int ENC1_A = 13;   // left wheel (driver side)
+constexpr int ENC1_B = 27;
+constexpr int ENC2_A = 16;    // right wheel (passenger side)
+constexpr int ENC2_B = 4;
 constexpr int ENC1_DIR = +1;
-constexpr int ENC2_DIR = +1;   // mirrored motor: adjust after testing
+constexpr int ENC2_DIR = -1;   // mirrored motor: adjust after testing
 constexpr uint32_t ENC_PERIOD_MS = 20;
 constexpr int ENC_LEFT  = 0;
 constexpr int ENC_RIGHT = 1;
@@ -102,3 +104,6 @@ constexpr uint32_t TELEOP_TIMEOUT_MS = 300;
 constexpr float MAX_DRIVE_SPEED = 1.0f;
 constexpr float MAX_TURN_PWM = 30.0f;
 constexpr float MAX_ACCEL = 1.0f;
+
+constexpr bool LOG_BRINGUP = true;
+constexpr bool LOG_TIMING  = true;

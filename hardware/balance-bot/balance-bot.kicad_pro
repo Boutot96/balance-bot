@@ -525,7 +525,7 @@
       "plot": "gerbers/",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "../../../../../../Downloads/balance-bot.stl",
+      "step": "../../../../../../Downloads/balance-bot.step",
       "svg": "",
       "vrml": ""
     },

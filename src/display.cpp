@@ -12,7 +12,8 @@ static WorkStats drawStats("drawCube");
 
 
 static Adafruit_SSD1306 oled(OLED_WIDTH, OLED_HEIGHT, &Wire, -1, 400000, 400000);
-static Adafruit_SSD1306 oled2(OLED_WIDTH, OLED_HEIGHT, &Wire,  -1, 400000, 400000);
+static Adafruit_SSD1306 oled2(OLED_WIDTH, OLED_HEIGHT, &Wire1,  -1, 400000, 400000);
+static Adafruit_SSD1306 oled3(OLED_WIDTH, OLED_HEIGHT, &Wire1,  -1, 400000, 400000);
 static bool             ready = false;   // did the screen start?
 static DisplayData      current;         // latest data from main
 
@@ -156,7 +157,7 @@ void eyeService(float angle){
 
     if(chunk >= 0){
         chunkStats.start();
-        oledSendChunk(oled2, Wire, OLED_ADDR2, chunk);
+        oledSendChunk(oled2, Wire1, OLED_ADDR2, chunk);
         chunkStats.stop();
         chunk++;
         if(chunk == 32) chunk = -1;
@@ -176,6 +177,9 @@ bool displaySetup(){
     if(!oled2.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR2, true, false)){
         return false;
     }
+    if(!oled3.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR, true, false)){
+        return false;
+    }
     oled.clearDisplay();
     oled.setTextSize(1);
     oled.setTextColor(SSD1306_WHITE);
@@ -187,8 +191,16 @@ bool displaySetup(){
     oled2.setTextSize(1);
     oled2.setTextColor(SSD1306_WHITE);
     oled2.setCursor(0, 0);
-    oled2.print("Balance-Bot: Eyes");
+    oled2.print("Balance-Bot: Eyes-1");
     oled2.display();
+
+    oled3.clearDisplay();
+    oled3.setTextSize(1);
+    oled3.setTextColor(SSD1306_WHITE);
+    oled3.setCursor(0, 0);
+    oled3.print("Balance-Bot: Eyes-2");
+    oled3.display();
+
     ready = true;
     return ready;
 }
